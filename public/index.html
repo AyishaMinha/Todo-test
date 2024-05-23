@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Todo App</title>
+  <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body { font-family: Arial, sans-serif; padding-top: 20px; }
+    .todo.completed { text-decoration: line-through; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1 class="text-center">Todo App</h1>
+    <div class="input-group mb-3">
+      <input type="text" class="form-control" id="newTodo" placeholder="Add a new todo">
+      <div class="input-group-append">
+        <button class="btn btn-primary" onclick="addTodo()">Add</button>
+      </div>
+    </div>
+    <ul id="todoList" class="list-group"></ul>
+  </div>
+
+  <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+  
+  <script>
+    const apiUrl = 'http://localhost:3000/todos';
+
+    async function fetchTodos() {
+      const response = await fetch(apiUrl);
+      const todos = await response.json();
+      const todoList = document.getElementById('todoList');
+      todoList.innerHTML = '';
+      todos.forEach(todo => {
+        const li = document.createElement('li');
+        li.className = `list-group-item d-flex justify-content-between align-items-center ${todo.completed ? 'completed' : ''}`;
+        li.innerHTML = `
+          <span onclick="toggleTodo('${todo._id}')">${todo.title}</span>
+          <div>
+            <button class="btn btn-sm btn-warning mr-2" onclick="editTodoDrop('${todo._id}', '${todo.title}')">Edit</button>
+            <button class="btn btn-sm btn-danger" onclick="deleteTodo('${todo._id}')">Delete</button>
+          </div>
+        `;
+        todoList.appendChild(li);
+      });
+    }
+
+    async function addTodo() {
+      const newTodoInput = document.getElementById('newTodo');
+      const title = newTodoInput.value;
+      if (title.trim()) {
+        await fetch(apiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title }),
+        });
+        newTodoInput.value = '';
+        fetchTodos();
+      }
+    }
+
+    async function toggleTodo(id) {
+      const response = await fetch(`${apiUrl}/${id}`);
+      const todo = await response.json();
+      await fetch(`${apiUrl}/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ completed: !todo.completed }),
+      });
+      fetchTodos();
+    }
+
+    async function deleteTodo(id) {
+      try {
+        await fetch(`${apiUrl}/${id}`, { method: 'DELETE' });
+        fetchTodos();
+      } catch (error) {
+        console.error('Error deleting todo:', error);
+      }
+    }
+
+    function editTodoDrop(id, title) {
+      const newTitle = prompt('Edit todo', title);
+      if (newTitle !== null && newTitle.trim() !== '') {
+        editTodo(id, newTitle);
+      }
+    }
+
+    async function editTodo(id, title) {
+      try {
+        await fetch(`${apiUrl}/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title }),
+        });
+        fetchTodos();
+      } catch (error) {
+        console.error('Error editing todo:', error);
+      }
+    }
+
+    fetchTodos();
+  </script>
+</body>
+</html>
